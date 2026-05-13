@@ -939,6 +939,178 @@ select.auth-input option {
 .note-countdown.today .cnt-val { font-size: 1.2rem; }
 .note-countdown.past { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
 
+/* --- Bucket List --- */
+.bucket-list-container {
+    grid-column: 1 / -1;
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
+    padding: 1.5rem;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+}
+.bucket-list-header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+.bucket-list-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.bucket-list-title-row h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+.bucket-list-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-indigo);
+}
+.bucket-progress-bar {
+    width: 80px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+}
+.bucket-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-indigo), var(--accent-teal));
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bucket-list-filters {
+    display: flex;
+    gap: 0.35rem;
+}
+.bucket-filter {
+    padding: 0.35rem 0.85rem;
+    border-radius: 2rem;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.bucket-filter:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-secondary);
+}
+.bucket-filter.active {
+    background: var(--accent-indigo);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+}
+.bucket-list-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 0.5rem;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+.bucket-list-items::-webkit-scrollbar { width: 4px; }
+.bucket-list-items::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.bucket-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    user-select: none;
+}
+.bucket-item:hover {
+    background: rgba(255,255,255,0.03);
+    border-color: var(--glass-border);
+}
+.bucket-item.checked {
+    opacity: 0.55;
+}
+.bucket-item.checked:hover { opacity: 0.75; }
+.bucket-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--glass-border-hover);
+    background: transparent;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    margin-top: 1px;
+}
+.bucket-item.checked .bucket-checkbox {
+    background: var(--accent-indigo);
+    border-color: var(--accent-indigo);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    animation: checkPop 0.35s ease;
+}
+@keyframes checkPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+.bucket-checkbox svg {
+    width: 12px; height: 12px;
+    stroke: white; stroke-width: 3;
+    fill: none; opacity: 0;
+    transition: opacity 0.2s;
+}
+.bucket-item.checked .bucket-checkbox svg { opacity: 1; }
+.bucket-item-content { flex: 1; min-width: 0; }
+.bucket-item-text {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.35;
+    transition: all 0.3s;
+}
+.bucket-item.checked .bucket-item-text {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+.bucket-item-location {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--accent-indigo);
+    margin-top: 0.15rem;
+    letter-spacing: 0.02em;
+}
+.bucket-item.checked .bucket-item-location { color: var(--text-muted); }
+.bucket-item-emoji {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    line-height: 1;
+    filter: grayscale(0);
+    transition: filter 0.3s;
+}
+.bucket-item.checked .bucket-item-emoji { filter: grayscale(0.6); }
+.bucket-list-source {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--glass-border);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 /* --- Responsive --- */
 @media (max-width: 768px) {
     .hero-section { height: 60vh; min-height: 400px; }

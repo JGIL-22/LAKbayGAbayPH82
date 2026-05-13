@@ -1525,6 +1525,138 @@
     }
 
     /* ============================================
+       9b. BUCKET LIST MODULE
+    ============================================ */
+    const BUCKET_LIST_KEY = 'lakbaygabay_bucketlist';
+
+    const BUCKET_ITEMS = [
+        { id: 'whale-shark', text: 'Swim with whale sharks (Butanding)', location: 'Oslob, Cebu', emoji: '🐋' },
+        { id: 'floating-cottage', text: 'Ride a floating cottage (Balsa)', location: 'Batangas', emoji: '🛶' },
+        { id: 'kalesa-vigan', text: 'Ride a Kalesa in Calle Crisologo', location: 'Vigan, Ilocos Sur', emoji: '🐴' },
+        { id: 'chocolate-hills', text: 'See the Chocolate Hills', location: 'Carmen, Bohol', emoji: '🏔️' },
+        { id: 'tarsier', text: 'Meet a Philippine Tarsier up close', location: 'Loboc, Bohol', emoji: '🐒' },
+        { id: 'underground-river', text: 'Explore the Underground River', location: 'Puerto Princesa, Palawan', emoji: '🕳️' },
+        { id: 'elnido-island', text: 'Island hop in El Nido lagoons', location: 'El Nido, Palawan', emoji: '🏝️' },
+        { id: 'surfing-siargao', text: 'Catch a wave at Cloud 9', location: 'General Luna, Siargao', emoji: '🏄' },
+        { id: 'boracay-sunset', text: 'Watch the sunset at White Beach', location: 'Boracay, Aklan', emoji: '🌅' },
+        { id: 'banaue-terraces', text: 'Trek the Banaue Rice Terraces', location: 'Banaue, Ifugao', emoji: '🌾' },
+        { id: 'mayon-volcano', text: 'See the perfect cone of Mayon Volcano', location: 'Legazpi, Albay', emoji: '🌋' },
+        { id: 'sardines-moalboal', text: 'Dive with millions of sardines', location: 'Moalboal, Cebu', emoji: '🐟' },
+        { id: 'mt-pulag', text: 'Camp above the sea of clouds at Mt. Pulag', location: 'Benguet', emoji: '⛺' },
+        { id: 'batanes-rolling', text: 'Walk the rolling hills of Batanes', location: 'Batanes', emoji: '🍃' },
+        { id: 'magellans-cross', text: "Visit Magellan's Cross", location: 'Cebu City, Cebu', emoji: '✝️' },
+        { id: 'san-juanico', text: 'Cross the San Juanico Bridge', location: 'Leyte – Samar', emoji: '🌉' },
+        { id: 'kalanggaman', text: 'Step on the sandbar of Kalanggaman Island', location: 'Palompon, Leyte', emoji: '🏖️' },
+        { id: 'coron-wrecks', text: 'Dive WWII Japanese shipwrecks', location: 'Coron, Palawan', emoji: '🤿' },
+        { id: 'intramuros', text: 'Walk the walls of Intramuros', location: 'Manila, Metro Manila', emoji: '🏰' },
+        { id: 'enchanted-river', text: 'Swim in the Enchanted River', location: 'Hinatuan, Surigao del Sur', emoji: '💎' },
+        { id: 'lake-sebu', text: 'Ride the zipline over Lake Sebu', location: 'South Cotabato', emoji: '🪂' },
+        { id: 'lechon-cebu', text: 'Eat authentic Cebu lechon', location: 'Cebu City, Cebu', emoji: '🍖' },
+        { id: 'sinulog', text: 'Dance at the Sinulog Festival', location: 'Cebu City, Cebu', emoji: '💃' },
+        { id: 'mt-apo', text: 'Summit Mt. Apo, the highest peak', location: 'Davao del Sur', emoji: '🗻' },
+        { id: 'bangus-festival', text: 'Join the Bangus Festival', location: 'Dagupan, Pangasinan', emoji: '🐠' },
+    ];
+
+    function getBucketChecked() {
+        if (!currentUser || currentUser.isGuest) {
+            try { return JSON.parse(localStorage.getItem(BUCKET_LIST_KEY + '_guest')) || []; }
+            catch { return []; }
+        }
+        const users = getAllUsers();
+        return users[currentUser.key]?.bucketChecked || [];
+    }
+
+    function saveBucketChecked(checked) {
+        if (!currentUser || currentUser.isGuest) {
+            localStorage.setItem(BUCKET_LIST_KEY + '_guest', JSON.stringify(checked));
+            return;
+        }
+        const users = getAllUsers();
+        if (users[currentUser.key]) {
+            users[currentUser.key].bucketChecked = checked;
+            saveAllUsers(users);
+        }
+    }
+
+    let bucketFilter = 'all';
+
+    function renderBucketList() {
+        const container = document.getElementById('bucket-list-items');
+        if (!container) return;
+
+        const checked = getBucketChecked();
+        container.innerHTML = '';
+
+        let visibleItems = BUCKET_ITEMS;
+        if (bucketFilter === 'done') {
+            visibleItems = BUCKET_ITEMS.filter(item => checked.includes(item.id));
+        } else if (bucketFilter === 'pending') {
+            visibleItems = BUCKET_ITEMS.filter(item => !checked.includes(item.id));
+        }
+
+        if (visibleItems.length === 0) {
+            container.innerHTML = `<div class="no-notes" style="grid-column:1/-1">No items match this filter.</div>`;
+        }
+
+        visibleItems.forEach(item => {
+            const isChecked = checked.includes(item.id);
+            const el = document.createElement('div');
+            el.className = `bucket-item${isChecked ? ' checked' : ''}`;
+            el.dataset.id = item.id;
+            el.innerHTML = `
+                <div class="bucket-checkbox">
+                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="bucket-item-content">
+                    <div class="bucket-item-text">${item.text}</div>
+                    <div class="bucket-item-location">📍 ${item.location}</div>
+                </div>
+                <div class="bucket-item-emoji">${item.emoji}</div>
+            `;
+            el.addEventListener('click', () => toggleBucketItem(item.id));
+            container.appendChild(el);
+        });
+
+        // Update progress
+        const doneCount = checked.length;
+        const totalCount = BUCKET_ITEMS.length;
+        const pct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+
+        const doneEl = document.getElementById('bucket-done');
+        const totalEl = document.getElementById('bucket-total');
+        const fillEl = document.getElementById('bucket-progress-fill');
+        if (doneEl) doneEl.textContent = doneCount;
+        if (totalEl) totalEl.textContent = totalCount;
+        if (fillEl) fillEl.style.width = pct + '%';
+    }
+
+    function toggleBucketItem(id) {
+        const checked = getBucketChecked();
+        const idx = checked.indexOf(id);
+        if (idx >= 0) {
+            checked.splice(idx, 1);
+        } else {
+            checked.push(id);
+        }
+        saveBucketChecked(checked);
+        renderBucketList();
+    }
+
+    function initBucketList() {
+        // Filter buttons
+        document.querySelectorAll('.bucket-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.bucket-filter').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                bucketFilter = btn.dataset.filter;
+                renderBucketList();
+            });
+        });
+
+        renderBucketList();
+    }
+
+    /* ============================================
        10. INITIALIZATION
     ============================================ */
     function init() {
@@ -1538,6 +1670,7 @@
         initResetModal();
         initAnnouncements();
         initCustomNotes();
+        initBucketList();
 
         function setupPasswordToggle(inputId, btnId) {
             const input = document.getElementById(inputId);
