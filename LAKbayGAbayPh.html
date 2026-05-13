@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAKbayGAbayPh | Traversing Project 82 — Mapasayo Generator</title>
+    <meta name="description" content="Track your Philippine travel journey across 82 provinces with LAKbayGAbayPh. Interactive map tracker and PDF generator.">
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/topojson-client@3"></script>
+
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ========== Toast Container ========== -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ========== Auth Modal ========== -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-card">
+            <div class="auth-logo">LAKbayGAbay<span>Ph</span></div>
+            <div class="auth-subtitle">Traversing Project 82</div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-mode="login">Log In</button>
+                <button class="auth-tab" data-mode="register">Register</button>
+            </div>
+
+            <!-- Profile Picture (Register only) -->
+            <div class="auth-avatar-section" id="auth-avatar-section" style="display:none">
+                <div class="auth-avatar-preview" id="auth-avatar-preview">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <label class="auth-avatar-btn" for="auth-avatar-input">Upload Photo</label>
+                <input type="file" id="auth-avatar-input" accept="image/*" style="display:none">
+            </div>
+
+            <div class="auth-input-group" id="auth-name-group" style="display:none">
+                <label for="auth-name">Your Full Name</label>
+                <input type="text" id="auth-name" class="auth-input" placeholder="Enter your full name" autocomplete="off">
+            </div>
+            <div class="auth-input-group" id="auth-type-group" style="display:none">
+                <label>Define Who You Are?</label>
+                <select id="auth-traveler-type" class="auth-input">
+                    <option value="⛰️ Bundokista">⛰️ Bundokista (Mountaineer)</option>
+                    <option value="🌊 Mandaragat">🌊 Mandaragat (Thalassophile)</option>
+                    <option value="🎒 Turista" selected>🎒 Turista (Traveler)</option>
+                    <option value="🧗‍♂️ Adventurista">🧗‍♂️ Adventurista (All in Adventurer)</option>
+                </select>
+            </div>
+            <div class="auth-input-group" id="auth-alias-group">
+                <label for="auth-alias">Explorer Alias</label>
+                <input type="text" id="auth-alias" class="auth-input" placeholder="On your bagtag name" autocomplete="off">
+            </div>
+            <div class="auth-input-group">
+                <label for="auth-pin">6-Digit PIN</label>
+                <div style="position:relative">
+                    <input type="password" id="auth-pin" class="auth-input" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="off" style="padding-right: 2.5rem;">
+                    <button type="button" id="toggle-auth-pin" class="pin-toggle-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+            </div>
+
+            <button id="auth-submit" class="auth-btn">Log In</button>
+            <div id="auth-error" class="auth-error-msg"></div>
+
+            <div class="auth-guest">
+                Or <a href="#" id="auth-guest-link">continue as guest</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== Edit Profile Modal ========== -->
+    <div id="edit-profile-overlay" class="auth-overlay" style="display:none">
+        <div class="auth-card">
+            <div class="auth-logo">Edit <span>Profile</span></div>
+            <div class="auth-subtitle">Update your traveler details</div>
+
+            <div class="auth-avatar-section" style="display:flex">
+                <div class="auth-avatar-preview" id="edit-avatar-preview">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <label class="auth-avatar-btn" for="edit-avatar-input">Change Photo</label>
+                <input type="file" id="edit-avatar-input" accept="image/*" style="display:none">
+            </div>
+
+            <div class="auth-input-group">
+                <label for="edit-alias">Explorer Alias</label>
+                <input type="text" id="edit-alias" class="auth-input" placeholder="e.g. JuanDelaCruz" autocomplete="off">
+            </div>
+            <div class="auth-input-group">
+                <label for="edit-pin">New 6-Digit PIN (Optional)</label>
+                <div style="position:relative">
+                    <input type="password" id="edit-pin" class="auth-input" placeholder="Leave blank to keep current password" maxlength="6" inputmode="numeric" autocomplete="off" style="padding-right: 2.5rem;">
+                    <button type="button" id="toggle-edit-pin" class="pin-toggle-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </button>
+                </div>
+            </div>
+
+            <button id="edit-submit" class="auth-btn">Save Changes</button>
+            <button id="edit-cancel" class="auth-btn" style="background:transparent; color:var(--text-secondary); border:1px solid var(--glass-border); margin-top:0.5rem">Cancel</button>
+            <button id="edit-delete-account" class="auth-btn" style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.2); margin-top:0.5rem; color:#f87171;">Delete Account</button>
+            <div id="edit-error" class="auth-error-msg"></div>
+        </div>
+    </div>
+
+    <!-- ========== User Bar (Navbar) ========== -->
+    <nav class="user-bar" id="user-bar">
+        <div class="user-bar-brand">LAKbayGAbay<span>Ph</span></div>
+        <div class="user-bar-right">
+            <div class="user-display" id="user-profile-trigger" style="cursor:pointer" title="View Profile">
+                <div class="user-avatar" id="user-avatar">
+                    <img id="user-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%">
+                    <span id="user-avatar-letter">E</span>
+                </div>
+                <div class="user-name-block">
+                    <span id="user-display-name" class="user-name-primary">Explorer</span>
+                    <span id="user-display-alias" class="user-name-alias"></span>
+                    <div id="user-traveler-badge" class="traveler-badge" style="display:none"></div>
+                </div>
+            </div>
+            <button class="btn-icon logout" id="btn-logout" title="Log Out">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ========== Capture Area (For Export) ========== -->
+    <div id="capture-area">
+        <!-- ========== Hero Section ========== -->
+        <section class="hero-section" id="hero">
+        <div class="hero-carousel" id="carousel">
+            <!-- Slides injected by JS -->
+        </div>
+        <div class="hero-gradient-overlay"></div>
+
+        <div class="hero-content">
+            <h1 class="hero-title fade-in-up">LAKbayGAbay<span class="accent">Ph</span></h1>
+            <p class="hero-tagline fade-in-up delay-1">Traversing Project 82 — Mapasayo Generator</p>
+
+            <div class="stats-panel fade-in-up delay-2">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-provinces">0</div>
+                    <div class="stat-label">Provinces</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-visited">0</div>
+                    <div class="stat-label">Been There</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-stayed">0</div>
+                    <div class="stat-label">Stayed There</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-percent">0%</div>
+                    <div class="stat-label">Complete</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="progress-wrapper">
+                    <div class="progress-label">PROGRESS</div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="carousel-dots" id="carousel-dots">
+            <!-- Dots injected by JS -->
+        </div>
+    </section>
+
+    <!-- ========== Map Section ========== -->
+    <main class="map-section">
+        <div class="map-frame">
+            <div class="map-frame-header">
+                <div class="map-frame-title">
+                    <div class="dot"></div>
+                    Interactive Province Map
+                </div>
+                <div class="map-frame-actions">
+                    <button class="btn-action" id="btn-save" title="Save Progress">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span class="btn-text">Save</span>
+                    </button>
+                    <!-- Download Dropdown -->
+                    <div class="download-dropdown" id="download-dropdown">
+                        <button class="btn-action primary" id="btn-download" title="Download Map">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span class="btn-text">Download</span>
+                            <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="download-menu" id="download-menu">
+                            <button class="download-option" data-format="png">PNG Image</button>
+                            <button class="download-option" data-format="jpeg">JPEG Image</button>
+                            <button class="download-option" data-format="pdf">PDF Document</button>
+                        </div>
+                    </div>
+                    <button class="btn-action danger" id="btn-reset" title="Reset Map">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        <span class="btn-text">Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="map"></div>
+            
+            <!-- PST Clock -->
+            <div class="pst-clock" id="pst-clock">
+                <div class="pst-flag">🇵🇭</div>
+                <div class="pst-time" id="pst-time">--:--:-- --</div>
+                <div class="pst-date" id="pst-date">--- --, ----</div>
+            </div>
+
+            <!-- Region Breakdown Panel -->
+            <div class="region-panel" id="region-panel">
+                <div class="region-panel-header">
+                    <div class="region-panel-title">Island Groups</div>
+                </div>
+                <div class="island-groups">
+                    <div class="island-item" id="island-luzon">
+                        <span class="island-name">Luzon</span>
+                        <span class="island-count">0/39</span>
+                        <div class="island-bar"><div class="island-bar-fill"></div></div>
+                    </div>
+                    <div class="island-item" id="island-visayas">
+                        <span class="island-name">Visayas</span>
+                        <span class="island-count">0/16</span>
+                        <div class="island-bar"><div class="island-bar-fill"></div></div>
+                    </div>
+                    <div class="island-item" id="island-mindanao">
+                        <span class="island-name">Mindanao</span>
+                        <span class="island-count">0/27</span>
+                        <div class="island-bar"><div class="island-bar-fill"></div></div>
+                    </div>
+                </div>
+
+                <div class="region-divider"></div>
+                <div class="region-panel-title" style="margin-bottom:0.5rem">Region Breakdown</div>
+                <div class="region-list">
+                    <div class="region-row" id="region-ncr"><span class="region-name">NCR</span><span class="region-count">0/1</span></div>
+                    <div class="region-row" id="region-car"><span class="region-name">CAR</span><span class="region-count">0/6</span></div>
+                    <div class="region-row" id="region-region-i"><span class="region-name">Region I</span><span class="region-count">0/4</span></div>
+                    <div class="region-row" id="region-region-ii"><span class="region-name">Region II</span><span class="region-count">0/5</span></div>
+                    <div class="region-row" id="region-region-iii"><span class="region-name">Region III</span><span class="region-count">0/7</span></div>
+                    <div class="region-row" id="region-region-iv-a"><span class="region-name">Region IV-A CALABARZON</span><span class="region-count">0/5</span></div>
+                    <div class="region-row" id="region-mimaropa"><span class="region-name">Region IV-B MIMAROPA</span><span class="region-count">0/5</span></div>
+                    <div class="region-row" id="region-region-v"><span class="region-name">Region V</span><span class="region-count">0/6</span></div>
+                    <div class="region-row" id="region-region-vi"><span class="region-name">Region VI</span><span class="region-count">0/5</span></div>
+                    <div class="region-row" id="region-nir"><span class="region-name">NIR</span><span class="region-count">0/3</span></div>
+                    <div class="region-row" id="region-region-vii"><span class="region-name">Region VII</span><span class="region-count">0/2</span></div>
+                    <div class="region-row" id="region-region-viii"><span class="region-name">Region VIII</span><span class="region-count">0/6</span></div>
+                    <div class="region-row" id="region-region-ix"><span class="region-name">Region IX</span><span class="region-count">0/4</span></div>
+                    <div class="region-row" id="region-region-x"><span class="region-name">Region X</span><span class="region-count">0/5</span></div>
+                    <div class="region-row" id="region-region-xi"><span class="region-name">Region XI</span><span class="region-count">0/5</span></div>
+                    <div class="region-row" id="region-region-xii"><span class="region-name">Region XII</span><span class="region-count">0/4</span></div>
+                    <div class="region-row" id="region-region-xiii"><span class="region-name">Region XIII</span><span class="region-count">0/5</span></div>
+                    <div class="region-row" id="region-barmm"><span class="region-name">BARMM</span><span class="region-count">0/5</span></div>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend-panel">
+                <div class="legend-title">Legend</div>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-dot unvisited"></div>
+                        <span class="legend-label">Unvisited</span>
+                    </div>
+                    <div class="legend-item has-tooltip">
+                        <div class="legend-dot visited"></div>
+                        <span class="legend-label">Been There</span>
+                        <div class="legend-tooltip">You've traveled there, visited, or explored the province even for a short trip.</div>
+                    </div>
+                    <div class="legend-item has-tooltip">
+                        <div class="legend-dot stayed"></div>
+                        <span class="legend-label">Stayed There</span>
+                        <div class="legend-tooltip">You've stayed overnight or longer (2+ days) like resided, lodged, or spent extended time there.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    </div> <!-- /#capture-area -->
+
+    <!-- ========== Holiday Alerts Section ========== -->
+    <section class="holiday-section fade-in-up delay-2" id="holiday-alerts">
+        <div class="holiday-header">
+            <h2 class="holiday-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Travel Center
+            </h2>
+        </div>
+        
+        <div class="travel-center-grid">
+            <!-- Switching Announcement Square -->
+            <div class="announcement-square">
+                <div class="announcement-top">
+                    <h3>Long Weekends 2026</h3>
+                    <div class="holiday-source">Source: Official Gazette of the Philippines</div>
+                </div>
+                <div class="announcement-content" id="announcement-content">
+                    <!-- Rendered by JS -->
+                </div>
+                <div class="announcement-controls">
+                    <button class="ann-btn" id="ann-prev">&lt;</button>
+                    <div class="ann-dots" id="ann-dots"></div>
+                    <button class="ann-btn" id="ann-next">&gt;</button>
+                </div>
+            </div>
+
+            <!-- Custom Travel Notes with Countdown -->
+            <div class="travel-notes-container">
+                <div class="notes-header">
+                    <h3>My Travel Notes</h3>
+                    <button class="btn-action primary" id="btn-add-note" style="margin: 0;">+ New Note</button>
+                </div>
+                <div class="custom-notes-list" id="custom-notes-list">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== Theme Picker ========== -->
+    <button class="theme-toggle-btn" id="theme-toggle" title="Choose Theme">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a10 10 0 0 1 0 20"/>
+            <circle cx="12" cy="12" r="4"/>
+        </svg>
+    </button>
+    <div class="theme-panel" id="theme-panel">
+        <div class="theme-panel-title">Choose Theme</div>
+        <div class="theme-option active" data-theme="dark"><span class="theme-dot" style="background:#1a1a2e"></span>Dark</div>
+        <div class="theme-option" data-theme="light"><span class="theme-dot" style="background:#e8e0d4"></span>Light</div>
+        <div class="theme-option" data-theme="midnight"><span class="theme-dot" style="background:#0f172a"></span>Midnight</div>
+        <div class="theme-option" data-theme="forest"><span class="theme-dot" style="background:#14532d"></span>Forest</div>
+        <div class="theme-option" data-theme="rose"><span class="theme-dot" style="background:#ffc0cb"></span>Rose</div>
+        <div class="theme-option" data-theme="slate"><span class="theme-dot" style="background:#94a3b8"></span>Slate</div>
+        <div class="theme-option" data-theme="sunset"><span class="theme-dot" style="background:#78350f"></span>Sunset</div>
+        <div class="theme-option" data-theme="arctic"><span class="theme-dot" style="background:#bfdbfe"></span>Arctic</div>
+        <div class="theme-option" data-theme="lavender"><span class="theme-dot" style="background:#c4b5fd"></span>Lavender</div>
+        <div class="theme-option" data-theme="mocha"><span class="theme-dot" style="background:#3e2723"></span>Mocha</div>
+        <div class="theme-option" data-theme="mono"><span class="theme-dot" style="background:#ffffff;border:1px solid #ccc"></span>Mono</div>
+        <div class="theme-option" data-theme="monoBlack"><span class="theme-dot" style="background:#171717"></span>Mono (Black)</div>
+    </div>
+
+    <!-- ========== Reset Confirmation Modal ========== -->
+    <div class="reset-modal-overlay" id="reset-modal" style="display:none">
+        <div class="reset-modal">
+            <div class="reset-modal-icon">⚠️</div>
+            <h3 class="reset-modal-title">Reset Map?</h3>
+            <p class="reset-modal-text">This will clear all your visited and stayed provinces back to unvisited. This action cannot be undone.</p>
+            <div class="reset-modal-actions">
+                <button class="reset-modal-btn cancel" id="reset-cancel">Cancel</button>
+                <button class="reset-modal-btn confirm" id="reset-confirm">Yes, Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== Add Note Modal ========== -->
+    <div class="auth-overlay" id="add-note-overlay" style="display:none">
+        <div class="auth-card">
+            <div class="auth-logo">New <span>Note</span></div>
+            <div class="auth-subtitle">Set a target or countdown</div>
+            <div class="auth-input-group">
+                <label for="note-title">Title / Destination</label>
+                <input type="text" id="note-title" class="auth-input" placeholder="ex. Boracay Trip" autocomplete="off">
+            </div>
+            <div class="auth-input-group">
+                <label for="note-date">Target Date</label>
+                <input type="date" id="note-date" class="auth-input">
+            </div>
+            <button id="note-submit" class="auth-btn">Save Note</button>
+            <button id="note-cancel" class="auth-btn" style="background:transparent; color:var(--text-secondary); border:1px solid var(--glass-border); margin-top:0.5rem">Cancel</button>
+            <div id="note-error" class="auth-error-msg"></div>
+        </div>
+    </div>
+
+    <!-- ========== Footer ========== -->
+    <footer class="app-footer">
+        <div class="footer-brand">LAKbayGAbay<span>Ph</span></div>
+        <div class="footer-text">Traversing Project 82 — Mapasayo Generator</div>
+        <div class="footer-authenticity">
+            <span class="check">✓</span>
+            Travel Tracker • © 2026 by John Gil Mayor (JonVoyor)
+        </div>
+    </footer>
+
+    <!-- App Logic -->
+    <script src="js/app.js"></script>
+</body>
+</html>
