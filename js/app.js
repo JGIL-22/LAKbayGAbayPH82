@@ -434,6 +434,7 @@
         const avatarInput = document.getElementById('edit-avatar-input');
         const avatarPreview = document.getElementById('edit-avatar-preview');
         const errorMsg = document.getElementById('edit-error');
+        const travelerTypeSelect = document.getElementById('edit-traveler-type');
 
         let currentPictureData = null;
 
@@ -454,6 +455,12 @@
             } else {
                 avatarPreview.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
             }
+
+            // Pre-select current traveler type
+            if (travelerTypeSelect && currentUser.travelerType) {
+                travelerTypeSelect.value = currentUser.travelerType;
+            }
+
             overlay.style.display = 'flex';
         });
 
@@ -505,6 +512,7 @@
             userData.alias = trimAlias;
             userData.picture = currentPictureData;
             if (newPin) userData.pin = newPin;
+            if (travelerTypeSelect) userData.travelerType = travelerTypeSelect.value;
 
             // Handle key change
             if (oldKey !== newKey) {
@@ -521,9 +529,11 @@
             currentUser.alias = trimAlias;
             if (newPin) currentUser.pin = newPin;
             currentUser.picture = currentPictureData;
+            if (travelerTypeSelect) currentUser.travelerType = travelerTypeSelect.value;
 
             updateUserBar();
             overlay.style.display = 'none';
+            syncToCloud();
             showToast('Profile updated successfully!', 'success');
         });
     }
