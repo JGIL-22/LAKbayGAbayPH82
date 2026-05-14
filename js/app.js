@@ -5,12 +5,6 @@
 (function () {
     'use strict';
 
-    /* ---------- V2 Data Migration Wipe ---------- */
-    if (!localStorage.getItem('LAKbay_Wiped_V2')) {
-        localStorage.clear();
-        localStorage.setItem('LAKbay_Wiped_V2', 'true');
-    }
-
     /* ---------- Constants ---------- */
     const STORAGE_KEY = 'lakbaygabay_users';
     const SESSION_KEY = 'lakbaygabay_session';
