@@ -1147,17 +1147,65 @@ select.auth-input option {
 
 /* --- Responsive --- */
 @media (max-width: 768px) {
-    .hero-section { height: 60vh; min-height: 400px; }
+    .hero-section { height: 55vh; min-height: 380px; padding-top: 3.5rem; }
     .hero-title { font-size: 2.2rem; }
+    .hero-tagline { font-size: 0.7rem; letter-spacing: 0.2em; }
     .stats-panel { padding: 1rem 1.25rem; flex-wrap: wrap; gap: 0.5rem; }
     .stat-item { padding: 0 1rem; }
     .stat-value { font-size: 1.6rem; }
-    .map-frame-header { flex-direction: column; gap: 0.75rem; }
-    .map-frame-actions { flex-wrap: wrap; }
-    .legend-panel { bottom: 0.75rem; left: 0.75rem; padding: 0.85rem 1rem; }
-    .region-panel { right: 0.5rem; width: 160px; padding: 0.75rem 0.85rem; top: 0.5rem; }
+
+    .map-section { padding: 0 0.5rem 2rem; }
+    .map-frame-header { flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem; }
+    .map-frame-title { font-size: 0.85rem; }
+    .map-frame-actions { flex-wrap: wrap; justify-content: center; gap: 0.35rem; }
+    .btn-action { padding: 0.4rem 0.65rem; font-size: 0.65rem; }
+
+    #map { height: 60vh; min-height: 350px; }
+
+    /* Clock: move to bottom-left, smaller */
+    .pst-clock {
+        top: auto; bottom: 0.5rem; left: 0.5rem;
+        padding: 0.35rem 0.6rem; gap: 0.4rem;
+        border-radius: 0.75rem;
+    }
+    .pst-flag { font-size: 0.9rem; }
+    .pst-time { font-size: 0.75rem; }
+    .pst-date { font-size: 0.5rem; }
+
+    /* Region panel: static below the map, not overlapping */
+    .region-panel {
+        position: relative;
+        top: auto; right: auto;
+        width: 100%;
+        max-height: none;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        border-top: 1px solid var(--glass-border);
+        padding: 0.75rem 1rem;
+        backdrop-filter: none;
+        background: var(--bg-card);
+    }
+    .island-groups { flex-direction: row; gap: 0.75rem; }
+    .island-item { flex: 1; min-width: 0; }
+
+    .region-list {
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 0.15rem 0.5rem;
+    }
+
+    .legend-panel {
+        bottom: 0.5rem; left: 0.5rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.75rem;
+    }
+    .legend-title { font-size: 0.6rem; margin-bottom: 0.5rem; }
+    .legend-items { gap: 0.35rem; }
+    .legend-label { font-size: 0.65rem; }
+
     .user-bar { padding: 0.5rem 1rem; }
-    #map { height: 55vh; }
+    .user-name-primary { font-size: 0.75rem; }
+    .user-name-alias { font-size: 0.65rem; }
+    .traveler-badge { font-size: 0.5rem; }
+
     .theme-toggle-btn { width: 44px; height: 44px; bottom: 1rem; right: 1rem; }
     .theme-panel { bottom: 4.5rem; right: 1rem; width: 190px; }
     .travel-center-grid { grid-template-columns: 1fr; gap: 1.5rem; }
@@ -1165,11 +1213,16 @@ select.auth-input option {
 }
 
 @media (max-width: 480px) {
+    .hero-section { padding-top: 4rem; }
+    .hero-title { font-size: 1.8rem; }
     .stat-divider { display: none; }
     .stats-panel { flex-direction: column; gap: 0.75rem; padding: 1rem; }
     .btn-action span.btn-text { display: none; }
     .progress-wrapper { width: 100%; padding-left: 0; padding-top: 0.5rem; align-items: center; }
     .progress-track { width: 100%; }
+
+    .region-list { grid-template-columns: 1fr; }
+    .legend-panel { display: none; }
 }
 
 /* --- Animations --- */
