@@ -707,6 +707,8 @@
         updateUserBar();
         loadProvinceStates();
         updateStats();
+        if (typeof renderCustomNotes === 'function') renderCustomNotes();
+        if (typeof renderBucketList === 'function') renderBucketList();
     }
 
     function updateUserBar() {

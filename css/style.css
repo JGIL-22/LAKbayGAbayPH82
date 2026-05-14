@@ -1162,11 +1162,11 @@ select.auth-input option {
 
     #map { height: 60vh; min-height: 350px; }
 
-    /* Clock: move to bottom-left, smaller */
+    /* Clock: position over the top-left of the map */
     .pst-clock {
-        top: auto; bottom: 0.5rem; left: 0.5rem;
+        top: 6rem; bottom: auto; left: 0.5rem;
         padding: 0.35rem 0.6rem; gap: 0.4rem;
-        border-radius: 0.75rem;
+        border-radius: 0.75rem; z-index: 2000;
     }
     .pst-flag { font-size: 0.9rem; }
     .pst-time { font-size: 0.75rem; }
@@ -1216,10 +1216,10 @@ select.auth-input option {
     .hero-section { padding-top: 4rem; }
     .hero-title { font-size: 1.8rem; }
     .stat-divider { display: none; }
-    .stats-panel { flex-direction: column; gap: 0.75rem; padding: 1rem; }
+    .stats-panel { flex-direction: column; gap: 0.75rem; padding: 1.25rem 1rem 1.75rem; }
     .btn-action span.btn-text { display: none; }
     .progress-wrapper { width: 100%; padding-left: 0; padding-top: 0.5rem; align-items: center; }
-    .progress-track { width: 100%; }
+    .progress-track { width: 90%; margin-top: 0.25rem; }
 
     .region-list { grid-template-columns: 1fr; }
     .legend-panel { display: none; }
