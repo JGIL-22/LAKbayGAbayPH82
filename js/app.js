@@ -775,11 +775,13 @@
             slide.style.backgroundImage = `url('${src}')`;
             container.appendChild(slide);
 
-            const dot = document.createElement('button');
-            dot.className = `carousel-dot${i === 0 ? ' active' : ''}`;
-            dot.setAttribute('aria-label', `Slide ${i + 1}`);
-            dot.addEventListener('click', () => goToSlide(i));
-            dotsContainer.appendChild(dot);
+            if (dotsContainer) {
+                const dot = document.createElement('button');
+                dot.className = `carousel-dot${i === 0 ? ' active' : ''}`;
+                dot.setAttribute('aria-label', `Slide ${i + 1}`);
+                dot.addEventListener('click', () => goToSlide(i));
+                dotsContainer.appendChild(dot);
+            }
         });
 
         startCarousel();
