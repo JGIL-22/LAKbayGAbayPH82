@@ -11,6 +11,137 @@
     const THEME_KEY = 'lakbaygabay_theme';
     const TOTAL_PROVINCES = 82;
 
+    /* ---------- Firebase Configuration ---------- */
+    // ⚠️ REPLACE these with your actual Firebase config from Firebase Console
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyAaGDKHNzaAQmzzy2huU7wwMc_dcN2njXg",
+        authDomain: "lakbaygabayph82.firebaseapp.com",
+        projectId: "lakbaygabayph82",
+        storageBucket: "lakbaygabayph82.firebasestorage.app",
+        messagingSenderId: "48984429678",
+        appId: "1:48984429678:web:0b32670df5053b5fe2427f"
+    };
+
+    /* ---------- Firebase Initialization ---------- */
+    let firebaseApp = null;
+    let firebaseAuth = null;
+    let firebaseDb = null;
+    let firebaseReady = false;
+
+    try {
+        if (typeof firebase !== 'undefined' && FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY') {
+            firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+            firebaseAuth = firebase.auth();
+            firebaseDb = firebase.firestore();
+            firebaseReady = true;
+            console.log('🔥 Firebase initialized');
+        } else if (FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
+            console.warn('⚠️ Firebase not configured. Using localStorage only. See FIREBASE_CONFIG in app.js.');
+        }
+    } catch (e) {
+        console.warn('Firebase init failed, falling back to localStorage:', e);
+    }
+
+    /* ---------- Firestore Cloud Sync Helpers ---------- */
+    async function syncToCloud() {
+        if (!firebaseReady || !firebaseAuth.currentUser || !currentUser || currentUser.isGuest) return;
+        try {
+            const uid = firebaseAuth.currentUser.uid;
+            const userData = {
+                displayName: currentUser.displayName || '',
+                alias: currentUser.alias || '',
+                travelerType: currentUser.travelerType || '🎒 Turista',
+                provinces: currentUser.provinces || {},
+                customNotes: currentUser.customNotes || [],
+                bucketChecked: currentUser.bucketChecked || [],
+                picture: currentUser.picture || null,
+                lastSaved: new Date().toISOString()
+            };
+            await firebaseDb.collection('users').doc(uid).set(userData, { merge: true });
+        } catch (e) {
+            console.warn('Cloud sync failed:', e);
+        }
+    }
+
+    async function loadFromCloud() {
+        if (!firebaseReady || !firebaseAuth.currentUser) return null;
+        try {
+            const uid = firebaseAuth.currentUser.uid;
+            const doc = await firebaseDb.collection('users').doc(uid).get();
+            if (doc.exists) return doc.data();
+        } catch (e) {
+            console.warn('Cloud load failed:', e);
+        }
+        return null;
+    }
+
+    async function handleGoogleSignIn(overlay) {
+        if (!firebaseReady) {
+            showToast('Firebase not configured. Please set up your Firebase project.', 'error');
+            return;
+        }
+        try {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            const result = await firebaseAuth.signInWithPopup(provider);
+            const gUser = result.user;
+
+            // Load existing data from Firestore
+            const cloudData = await loadFromCloud();
+
+            if (cloudData) {
+                // Returning user — load from cloud
+                currentUser = {
+                    key: gUser.uid,
+                    displayName: cloudData.displayName || gUser.displayName || 'Explorer',
+                    alias: cloudData.alias || gUser.displayName?.split(' ')[0] || 'Traveler',
+                    pin: '000000',
+                    picture: cloudData.picture || gUser.photoURL || null,
+                    travelerType: cloudData.travelerType || '🎒 Turista',
+                    provinces: cloudData.provinces || {},
+                    customNotes: cloudData.customNotes || [],
+                    bucketChecked: cloudData.bucketChecked || [],
+                    isFirebase: true
+                };
+                showToast(`Welcome back, ${currentUser.displayName}!`, 'success');
+            } else {
+                // New user — create in Firestore
+                currentUser = {
+                    key: gUser.uid,
+                    displayName: gUser.displayName || 'Explorer',
+                    alias: gUser.displayName?.split(' ')[0] || 'Traveler',
+                    pin: '000000',
+                    picture: gUser.photoURL || null,
+                    travelerType: '🎒 Turista',
+                    provinces: {},
+                    customNotes: [],
+                    bucketChecked: [],
+                    isFirebase: true,
+                    createdAt: new Date().toISOString()
+                };
+                await syncToCloud();
+                showToast(`Welcome, ${currentUser.displayName}! Account created with Google.`, 'success');
+            }
+
+            // Also cache locally for fast reload
+            const users = getAllUsers();
+            users[gUser.uid] = { ...currentUser };
+            delete users[gUser.uid].key;
+            delete users[gUser.uid].isFirebase;
+            saveAllUsers(users);
+            setSession(gUser.uid);
+
+            overlay.classList.add('hidden');
+            setTimeout(() => overlay.style.display = 'none', 500);
+            onUserReady();
+
+        } catch (e) {
+            if (e.code !== 'auth/popup-closed-by-user') {
+                console.error('Google sign-in error:', e);
+                showToast('Google sign-in failed. ' + (e.message || ''), 'error');
+            }
+        }
+    }
+
     const CAROUSEL_IMAGES = [
         "image%20sources/Travel%20destinations%20(Hero-section)/Boracay_White_Beach.png",
         "image%20sources/Travel%20destinations%20(Hero-section)/Coron_Palawan.jpg",
@@ -489,6 +620,44 @@
             onUserReady();
             showToast('Continuing as guest. Progress won\'t be saved.', 'info');
         });
+
+        // Google Sign-In button
+        const googleBtn = document.getElementById('google-signin-btn');
+        if (googleBtn) {
+            if (!firebaseReady) {
+                googleBtn.style.opacity = '0.5';
+                googleBtn.title = 'Firebase not configured';
+            }
+            googleBtn.addEventListener('click', () => handleGoogleSignIn(overlay));
+        }
+
+        // Check if Firebase user is already signed in
+        if (firebaseReady) {
+            firebaseAuth.onAuthStateChanged(async (gUser) => {
+                if (gUser && !currentUser) {
+                    // User already signed in via Firebase, auto-load
+                    const cloudData = await loadFromCloud();
+                    if (cloudData) {
+                        currentUser = {
+                            key: gUser.uid,
+                            displayName: cloudData.displayName || gUser.displayName || 'Explorer',
+                            alias: cloudData.alias || gUser.displayName?.split(' ')[0] || 'Traveler',
+                            pin: '000000',
+                            picture: cloudData.picture || gUser.photoURL || null,
+                            travelerType: cloudData.travelerType || '🎒 Turista',
+                            provinces: cloudData.provinces || {},
+                            customNotes: cloudData.customNotes || [],
+                            bucketChecked: cloudData.bucketChecked || [],
+                            isFirebase: true
+                        };
+                        setSession(gUser.uid);
+                        overlay.classList.add('hidden');
+                        setTimeout(() => overlay.style.display = 'none', 500);
+                        onUserReady();
+                    }
+                }
+            });
+        }
     }
 
     function handleAuthSubmit(mode, nameInput, aliasInput, pinInput, pictureData, errorMsg, overlay) {
@@ -573,6 +742,10 @@
     function logout() {
         clearSession();
         currentUser = null;
+        // Sign out of Firebase too
+        if (firebaseReady && firebaseAuth) {
+            firebaseAuth.signOut().catch(() => {});
+        }
         location.reload();
     }
 
@@ -889,6 +1062,9 @@
             users[currentUser.key].lastSaved = currentUser.lastSaved;
             saveAllUsers(users);
         }
+
+        // Sync to cloud (non-blocking)
+        syncToCloud();
     }
 
     function loadProvinceStates() {
@@ -917,7 +1093,11 @@
             return;
         }
         saveProvinceStates();
-        showToast('Progress saved!', 'success');
+        if (currentUser.isFirebase) {
+            showToast('Progress saved & synced to cloud! ☁️', 'success');
+        } else {
+            showToast('Progress saved!', 'success');
+        }
     }
 
     function performReset() {
@@ -1547,11 +1727,13 @@
             localStorage.setItem('LAKbay_GuestNotes', JSON.stringify(notes));
             return;
         }
+        currentUser.customNotes = notes;
         const users = getAllUsers();
         if (users[currentUser.key]) {
             users[currentUser.key].customNotes = notes;
             saveAllUsers(users);
         }
+        syncToCloud();
     }
 
     function getDaysDiff(targetDateStr, creationDateStr) {
@@ -1643,12 +1825,21 @@
 
         const btnEditDelete = document.getElementById('edit-delete-account');
         if (btnEditDelete) {
-            btnEditDelete.addEventListener('click', () => {
+            btnEditDelete.addEventListener('click', async () => {
                 if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+                    // Delete from localStorage
                     const users = getAllUsers();
                     if (users[currentUser.key]) {
                         delete users[currentUser.key];
                         saveAllUsers(users);
+                    }
+                    // Delete from Firestore
+                    if (firebaseReady && firebaseAuth.currentUser) {
+                        try {
+                            await firebaseDb.collection('users').doc(firebaseAuth.currentUser.uid).delete();
+                        } catch (e) {
+                            console.warn('Cloud delete failed:', e);
+                        }
                     }
                     const overlay = document.getElementById('edit-profile-overlay');
                     if (overlay) overlay.style.display = 'none';
@@ -1770,11 +1961,13 @@
             localStorage.setItem(BUCKET_LIST_KEY + '_guest', JSON.stringify(checked));
             return;
         }
+        currentUser.bucketChecked = checked;
         const users = getAllUsers();
         if (users[currentUser.key]) {
             users[currentUser.key].bucketChecked = checked;
             saveAllUsers(users);
         }
+        syncToCloud();
     }
 
     let bucketFilter = 'all';

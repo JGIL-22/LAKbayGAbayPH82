@@ -187,6 +187,40 @@ select.auth-input option {
 }
 .auth-guest a:hover { text-decoration: underline; }
 
+/* --- Google Sign-In Button --- */
+.google-signin-btn {
+    width: 100%; padding: 0.75rem 1rem;
+    display: flex; align-items: center; justify-content: center; gap: 0.65rem;
+    background: #ffffff; border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 0.75rem; cursor: pointer;
+    font-family: 'Inter', sans-serif; font-size: 0.85rem;
+    font-weight: 600; color: #3c4043;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.google-signin-btn:hover {
+    background: #f8f9fa;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+}
+.google-signin-btn:active {
+    transform: translateY(0);
+    background: #e8eaed;
+}
+.google-signin-btn svg { flex-shrink: 0; }
+
+.auth-divider {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin: 1.25rem 0;
+    color: var(--text-muted); font-size: 0.7rem;
+    font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+.auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+}
+
 /* --- Toast Notifications --- */
 .toast-container {
     position: fixed; top: 5.5rem; right: 1.5rem;
