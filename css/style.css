@@ -888,22 +888,24 @@ select.auth-input option {
 .holiday-source { font-size: 0.75rem; color: var(--text-muted); font-style: italic; }
 
 .travel-center-grid {
-    display: grid; grid-template-columns: minmax(300px, 1fr) minmax(300px, 1.5fr); gap: 2rem;
+    display: grid; grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.5fr); gap: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 .announcement-square {
     background: var(--bg-card); border: 1px solid var(--glass-border);
-    border-radius: var(--radius-2xl); padding: 2.5rem;
+    border-radius: var(--radius-2xl); padding: 1.5rem;
     display: flex; flex-direction: column; justify-content: space-between;
-    aspect-ratio: 1; max-height: 420px; position: relative; overflow: hidden;
+    aspect-ratio: auto; max-height: 280px; position: relative; overflow: hidden;
     box-shadow: 0 15px 40px rgba(0,0,0,0.3);
 }
-.announcement-top h3 { font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.25rem; }
+.announcement-square.compact { max-height: 280px; padding: 1.25rem 1.5rem; }
+.announcement-top h3 { font-family: 'Outfit', sans-serif; font-size: 1rem; color: var(--text-primary); margin-bottom: 0.2rem; }
 .announcement-content {
     flex: 1; display: flex; flex-direction: column; justify-content: center;
     transition: opacity 0.3s ease;
 }
-.ann-date { font-family: 'Outfit', sans-serif; font-size: 1.75rem; font-weight: 800; color: var(--accent-teal); margin-bottom: 0.5rem; }
-.ann-name { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; line-height: 1.2; }
+.ann-date { font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 800; color: var(--accent-teal); margin-bottom: 0.35rem; }
+.ann-name { font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem; line-height: 1.2; }
 .ann-type {
     display: inline-block; padding: 0.3rem 0.6rem; border-radius: 6px;
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
@@ -924,8 +926,8 @@ select.auth-input option {
 
 .travel-notes-container {
     background: var(--bg-card); border: 1px solid var(--glass-border);
-    border-radius: var(--radius-2xl); padding: 1.5rem;
-    display: flex; flex-direction: column; height: 100%; max-height: 420px;
+    border-radius: var(--radius-2xl); padding: 1.25rem 1.5rem;
+    display: flex; flex-direction: column; height: 100%; max-height: 280px;
     box-shadow: 0 15px 40px rgba(0,0,0,0.3);
 }
 .notes-header {
@@ -1242,3 +1244,156 @@ select.auth-input option {
 ::-webkit-scrollbar-track { background: var(--bg-deepest); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* =============================================
+   KALENDAYO — Calendar Module
+   ============================================= */
+
+.kalendayo-wrapper {
+    margin-bottom: 1.5rem;
+}
+
+.kalendayo-container {
+    background: var(--bg-card); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl); padding: 1.5rem;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.kalendayo-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;
+}
+
+.kalendayo-title-row {
+    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+}
+
+.kalendayo-title {
+    font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 700;
+    color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; margin: 0;
+}
+.kalendayo-title svg { color: var(--accent-indigo); }
+
+.kalendayo-legend {
+    display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;
+}
+.kd-legend-item {
+    display: flex; align-items: center; gap: 0.35rem;
+    font-size: 0.7rem; color: var(--text-secondary); font-weight: 500;
+}
+.kd-dot {
+    width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+}
+.kd-dot.long-weekend  { background: rgba(52, 211, 153, 0.5); border: 1px solid rgba(52,211,153,0.7); }
+.kd-dot.regular-holiday { background: rgba(99, 102, 241, 0.5); border: 1px solid rgba(99,102,241,0.7); }
+.kd-dot.special-holiday { background: rgba(251, 191, 36, 0.45); border: 1px solid rgba(251,191,36,0.65); }
+.kd-dot.has-note { background: rgba(244, 63, 94, 0.5); border: 1px solid rgba(244,63,94,0.7); }
+
+.kalendayo-nav {
+    display: flex; align-items: center; gap: 0.75rem;
+}
+.kd-nav-btn {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
+    color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; transition: 0.2s; font-size: 1.1rem; display: flex;
+    align-items: center; justify-content: center;
+}
+.kd-nav-btn:hover { background: rgba(255,255,255,0.12); color: var(--text-primary); }
+.kd-month-label {
+    font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700;
+    color: var(--text-primary); min-width: 110px; text-align: center;
+}
+
+.kalendayo-grid-header {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 0.35rem;
+}
+.kalendayo-grid-header span {
+    text-align: center; font-size: 0.65rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-muted); padding: 0.3rem 0;
+}
+
+.kalendayo-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+}
+
+.kd-day {
+    border-radius: 8px; min-height: 52px; padding: 0.35rem 0.4rem;
+    position: relative; cursor: default; transition: background 0.15s, border-color 0.15s;
+    border: 1px solid transparent; display: flex; flex-direction: column;
+}
+.kd-day.clickable { cursor: pointer; }
+.kd-day.clickable:hover { background: rgba(255,255,255,0.06) !important; border-color: var(--glass-border-hover) !important; }
+
+.kd-day.other-month { opacity: 0.28; }
+
+.kd-day.today { border-color: var(--accent-indigo) !important; }
+.kd-day.today .kd-day-num { color: var(--accent-indigo); font-weight: 800; }
+
+.kd-day.is-sunday .kd-day-num,
+.kd-day.is-saturday .kd-day-num { color: var(--accent-teal); }
+
+.kd-day.long-weekend-day { background: rgba(52, 211, 153, 0.1); border-color: rgba(52,211,153,0.2); }
+.kd-day.regular-holiday-day { background: rgba(99, 102, 241, 0.1); border-color: rgba(99,102,241,0.2); }
+.kd-day.special-holiday-day { background: rgba(251, 191, 36, 0.08); border-color: rgba(251,191,36,0.2); }
+
+.kd-day-num {
+    font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 600;
+    color: var(--text-secondary); line-height: 1;
+}
+
+.kd-day-events {
+    display: flex; flex-direction: column; gap: 2px; margin-top: 3px; flex: 1;
+}
+
+.kd-event-chip {
+    font-size: 0.55rem; font-weight: 700; padding: 1px 4px; border-radius: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    text-transform: uppercase; letter-spacing: 0.03em;
+}
+.kd-event-chip.regular  { background: rgba(99,102,241,0.2); color: #818cf8; }
+.kd-event-chip.special  { background: rgba(251,191,36,0.18); color: #fbbf24; }
+.kd-event-chip.note     { background: rgba(244,63,94,0.18); color: #fb7185; }
+
+.kd-note-dot {
+    position: absolute; bottom: 4px; right: 4px;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent-red);
+}
+
+/* Popover */
+.kd-popover {
+    position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    background: var(--bg-card); border: 1px solid var(--glass-border);
+    border-radius: 12px; padding: 1rem 1.25rem; min-width: 220px; max-width: 300px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4); z-index: 50;
+}
+.kd-popover-date {
+    font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 700;
+    color: var(--accent-teal); margin-bottom: 0.5rem;
+}
+.kd-popover-events { display: flex; flex-direction: column; gap: 0.4rem; }
+.kd-popover-event {
+    font-size: 0.8rem; color: var(--text-primary); display: flex; gap: 0.4rem; align-items: flex-start;
+}
+.kd-popover-event-icon { font-size: 0.85rem; flex-shrink: 0; }
+.kd-popover-event-type { font-size: 0.65rem; color: var(--text-muted); }
+.kd-popover-close {
+    position: absolute; top: 0.5rem; right: 0.75rem;
+    background: transparent; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 0.85rem; padding: 0.15rem;
+}
+.kd-popover-close:hover { color: var(--text-primary); }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .travel-center-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .announcement-square { max-height: 260px; }
+    .travel-notes-container { max-height: 260px; }
+    .kd-day { min-height: 42px; }
+    .kd-event-chip { display: none; }
+    .kalendayo-legend { gap: 0.5rem; }
+    .kalendayo-title-row { gap: 0.75rem; }
+}

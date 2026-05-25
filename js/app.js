@@ -1872,6 +1872,7 @@
                     currentNotes.splice(idx, 1);
                     saveCustomNotes(currentNotes);
                     renderCustomNotes();
+                    if (typeof refreshKalenDAYO === 'function') refreshKalenDAYO();
                     return;
                 }
                 
@@ -1921,6 +1922,7 @@
                 saveCustomNotes(notes);
                 overlay.style.display = 'none';
                 renderCustomNotes();
+                if (typeof refreshKalenDAYO === 'function') refreshKalenDAYO();
                 showToast(editNoteIndex >= 0 ? 'Note updated!' : 'Note added!', 'success');
             });
         }
@@ -2063,7 +2065,236 @@
     }
 
     /* ============================================
-       10. INITIALIZATION
+       10. KALENDAYO — Interactive Calendar
+    ============================================ */
+
+    // Full 2026 PH holiday dataset with long-weekend ranges
+    const PH_HOLIDAYS_2026 = [
+        // Jan long weekend
+        { date: '2026-01-01', name: 'New Year\'s Day', type: 'regular', lwStart: '2026-01-01', lwEnd: '2026-01-04' },
+        { date: '2026-01-02', name: 'New Year Bridge Day', type: 'regular', lwStart: '2026-01-01', lwEnd: '2026-01-04' },
+        // Holy Week
+        { date: '2026-04-02', name: 'Maundy Thursday', type: 'regular', lwStart: '2026-04-02', lwEnd: '2026-04-05' },
+        { date: '2026-04-03', name: 'Good Friday', type: 'regular', lwStart: '2026-04-02', lwEnd: '2026-04-05' },
+        { date: '2026-04-04', name: 'Black Saturday', type: 'special', lwStart: '2026-04-02', lwEnd: '2026-04-05' },
+        // Araw ng Kagitingan
+        { date: '2026-04-09', name: 'Araw ng Kagitingan', type: 'regular', lwStart: '2026-04-09', lwEnd: '2026-04-12' },
+        // Labor Day
+        { date: '2026-05-01', name: 'Labor Day', type: 'regular', lwStart: '2026-05-01', lwEnd: '2026-05-03' },
+        // Independence Day
+        { date: '2026-06-12', name: 'Independence Day', type: 'regular', lwStart: '2026-06-12', lwEnd: '2026-06-14' },
+        // Ninoy Aquino Day
+        { date: '2026-08-21', name: 'Ninoy Aquino Day', type: 'special', lwStart: '2026-08-21', lwEnd: '2026-08-23' },
+        // National Heroes Day
+        { date: '2026-08-31', name: 'National Heroes Day', type: 'regular', lwStart: '2026-08-29', lwEnd: '2026-08-31' },
+        // Undas
+        { date: '2026-11-01', name: 'All Saints\' Day', type: 'special', lwStart: '2026-10-31', lwEnd: '2026-11-02' },
+        { date: '2026-11-02', name: 'All Souls\' Day', type: 'special', lwStart: '2026-10-31', lwEnd: '2026-11-02' },
+        // Bonifacio Day
+        { date: '2026-11-30', name: 'Bonifacio Day', type: 'regular', lwStart: '2026-11-28', lwEnd: '2026-11-30' },
+        // Christmas
+        { date: '2026-12-24', name: 'Christmas Eve', type: 'special', lwStart: '2026-12-24', lwEnd: '2026-12-27' },
+        { date: '2026-12-25', name: 'Christmas Day', type: 'regular', lwStart: '2026-12-24', lwEnd: '2026-12-27' },
+        { date: '2026-12-26', name: 'Christmas Bridge', type: 'special', lwStart: '2026-12-24', lwEnd: '2026-12-27' },
+        // Rizal Day
+        { date: '2026-12-30', name: 'Rizal Day', type: 'regular', lwStart: '2026-12-30', lwEnd: '2027-01-03' },
+        { date: '2026-12-31', name: 'New Year\'s Eve', type: 'special', lwStart: '2026-12-30', lwEnd: '2027-01-03' },
+        // Eid (approximate 2026)
+        { date: '2026-03-20', name: 'Eid\'l Fitr (tentative)', type: 'regular' },
+        { date: '2026-05-27', name: 'Eid\'l Adha (tentative)', type: 'regular' },
+    ];
+
+    // Build lookup: dateString → holiday info
+    function buildHolidayMap() {
+        const map = {};
+        PH_HOLIDAYS_2026.forEach(h => {
+            if (!map[h.date]) map[h.date] = [];
+            map[h.date].push(h);
+        });
+        return map;
+    }
+
+    // Build long-weekend range set: dateString → true
+    function buildLongWeekendSet() {
+        const set = {};
+        PH_HOLIDAYS_2026.forEach(h => {
+            if (!h.lwStart || !h.lwEnd) return;
+            const start = new Date(h.lwStart);
+            const end = new Date(h.lwEnd);
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                set[formatDate(new Date(d))] = true;
+            }
+        });
+        return set;
+    }
+
+    function formatDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+    }
+
+    const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    let kdYear = 2026;
+    let kdMonth = new Date().getMonth(); // 0-indexed; start at current month (capped to 2026)
+    // Clamp to 2026 context
+    if (new Date().getFullYear() > 2026) { kdYear = 2026; kdMonth = 0; }
+    else if (new Date().getFullYear() === 2026) { kdMonth = new Date().getMonth(); }
+    else { kdMonth = 0; }
+
+    function initKalenDAYO() {
+        const grid = document.getElementById('kd-grid');
+        const label = document.getElementById('kd-month-label');
+        const btnPrev = document.getElementById('kd-prev');
+        const btnNext = document.getElementById('kd-next');
+        const popover = document.getElementById('kd-popover');
+        const popDate = document.getElementById('kd-popover-date');
+        const popEvents = document.getElementById('kd-popover-events');
+        const popClose = document.getElementById('kd-popover-close');
+        if (!grid) return;
+
+        const holidayMap = buildHolidayMap();
+        const lwSet = buildLongWeekendSet();
+
+        function renderKalenDAYO() {
+            label.textContent = `${MONTH_NAMES[kdMonth]} ${kdYear}`;
+            grid.innerHTML = '';
+
+            const firstDay = new Date(kdYear, kdMonth, 1).getDay(); // 0=Sun
+            const daysInMonth = new Date(kdYear, kdMonth + 1, 0).getDate();
+            const prevMonthDays = new Date(kdYear, kdMonth, 0).getDate();
+
+            const todayStr = formatDate(new Date());
+            const notes = getCustomNotes();
+
+            // Build note-date set
+            const noteSet = {};
+            notes.forEach(n => {
+                if (n.date) noteSet[n.date] = (noteSet[n.date] || []).concat(n);
+            });
+
+            // Fill in previous month's overflow
+            for (let i = 0; i < firstDay; i++) {
+                const dayNum = prevMonthDays - firstDay + 1 + i;
+                const cell = document.createElement('div');
+                cell.className = 'kd-day other-month';
+                cell.innerHTML = `<div class="kd-day-num">${dayNum}</div>`;
+                grid.appendChild(cell);
+            }
+
+            // Fill current month
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = formatDate(new Date(kdYear, kdMonth, d));
+                const cell = document.createElement('div');
+                const dow = new Date(kdYear, kdMonth, d).getDay();
+                const isLW = lwSet[dateStr];
+                const holidays = holidayMap[dateStr] || [];
+                const notesOnDay = noteSet[dateStr] || [];
+                const hasEvents = holidays.length > 0 || notesOnDay.length > 0;
+
+                let classes = 'kd-day';
+                if (dow === 0) classes += ' is-sunday';
+                if (dow === 6) classes += ' is-saturday';
+                if (dateStr === todayStr) classes += ' today';
+                if (isLW) classes += ' long-weekend-day';
+                else if (holidays.some(h => h.type === 'regular')) classes += ' regular-holiday-day';
+                else if (holidays.some(h => h.type === 'special')) classes += ' special-holiday-day';
+                if (hasEvents) classes += ' clickable';
+
+                cell.className = classes;
+
+                let chipsHtml = '';
+                holidays.slice(0, 2).forEach(h => {
+                    const cls = h.type === 'regular' ? 'regular' : 'special';
+                    const short = h.name.length > 14 ? h.name.substring(0, 13) + '…' : h.name;
+                    chipsHtml += `<div class="kd-event-chip ${cls}">${short}</div>`;
+                });
+                notesOnDay.slice(0, 1).forEach(n => {
+                    const short = n.title.length > 14 ? n.title.substring(0, 13) + '…' : n.title;
+                    chipsHtml += `<div class="kd-event-chip note">${short}</div>`;
+                });
+
+                cell.innerHTML = `
+                    <div class="kd-day-num">${d}</div>
+                    <div class="kd-day-events">${chipsHtml}</div>
+                    ${notesOnDay.length > 0 ? '<div class="kd-note-dot"></div>' : ''}
+                `;
+
+                if (hasEvents) {
+                    cell.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const dayDate = new Date(kdYear, kdMonth, d);
+                        const opts = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                        popDate.textContent = dayDate.toLocaleDateString('en-PH', opts);
+
+                        let evHtml = '';
+                        holidays.forEach(h => {
+                            const icon = h.type === 'regular' ? '🇵🇭' : '📅';
+                            const typeLabel = h.type === 'regular' ? 'Regular Holiday' : 'Special Non-Working';
+                            evHtml += `<div class="kd-popover-event">
+                                <span class="kd-popover-event-icon">${icon}</span>
+                                <div><div>${h.name}</div><div class="kd-popover-event-type">${typeLabel}${isLW ? ' · Long Weekend' : ''}</div></div>
+                            </div>`;
+                        });
+                        notesOnDay.forEach(n => {
+                            evHtml += `<div class="kd-popover-event">
+                                <span class="kd-popover-event-icon">📌</span>
+                                <div><div>${n.title}</div><div class="kd-popover-event-type">My Travel Note</div></div>
+                            </div>`;
+                        });
+                        if (!evHtml) evHtml = '<div class="kd-popover-event"><span>No events</span></div>';
+
+                        popEvents.innerHTML = evHtml;
+                        popover.style.display = 'block';
+                    });
+                }
+
+                grid.appendChild(cell);
+            }
+
+            // Fill trailing days
+            const totalCells = firstDay + daysInMonth;
+            const remainder = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let i = 1; i <= remainder; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'kd-day other-month';
+                cell.innerHTML = `<div class="kd-day-num">${i}</div>`;
+                grid.appendChild(cell);
+            }
+        }
+
+        btnPrev.addEventListener('click', () => {
+            kdMonth--;
+            if (kdMonth < 0) { kdMonth = 11; kdYear--; }
+            popover.style.display = 'none';
+            renderKalenDAYO();
+        });
+        btnNext.addEventListener('click', () => {
+            kdMonth++;
+            if (kdMonth > 11) { kdMonth = 0; kdYear++; }
+            popover.style.display = 'none';
+            renderKalenDAYO();
+        });
+        if (popClose) popClose.addEventListener('click', () => { popover.style.display = 'none'; });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.kd-day') && !e.target.closest('.kd-popover')) {
+                popover.style.display = 'none';
+            }
+        });
+
+        renderKalenDAYO();
+    }
+
+    // Re-render KalenDAYO when notes change to reflect user notes on calendar
+    function refreshKalenDAYO() {
+        const grid = document.getElementById('kd-grid');
+        if (grid) initKalenDAYO();
+    }
+
+    /* ============================================
+       11. INITIALIZATION
     ============================================ */
     function init() {
         initCarousel();
@@ -2077,6 +2308,7 @@
         initAnnouncements();
         initCustomNotes();
         initBucketList();
+        initKalenDAYO();
 
         function setupPasswordToggle(inputId, btnId) {
             const input = document.getElementById(inputId);
