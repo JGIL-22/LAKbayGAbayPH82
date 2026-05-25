@@ -373,16 +373,16 @@
     }
 
     function getSession() {
-        try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); }
+        try { return JSON.parse(localStorage.getItem(SESSION_KEY)); }
         catch { return null; }
     }
 
     function setSession(username) {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ username }));
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ username }));
     }
 
     function clearSession() {
-        sessionStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(SESSION_KEY);
     }
 
     function registerUser(name, pin, alias, pictureData, travelerType) {
@@ -568,19 +568,86 @@
             reader.readAsDataURL(file);
         });
 
-        // Check existing session from localStorage
-        const session = getSession();
-        if (session) {
-            const users = getAllUsers();
-            const user = users[session.username];
-            if (user) {
-                currentUser = { key: session.username, ...user };
-                overlay.classList.add('hidden');
-                setTimeout(() => overlay.style.display = 'none', 500);
-                onUserReady();
-                return;
-            } else {
-                clearSession();
+        // For Firebase/Google users: always let onAuthStateChanged handle auth first.
+        // For alias/PIN users: check localStorage session as fallback.
+        if (firebaseReady) {
+            firebaseAuth.onAuthStateChanged(async (gUser) => {
+                if (gUser) {
+                    // Firebase user detected — always load fresh from cloud
+                    const cloudData = await loadFromCloud();
+                    if (cloudData) {
+                        currentUser = {
+                            key: gUser.uid,
+                            displayName: cloudData.displayName || gUser.displayName || 'Explorer',
+                            alias: cloudData.alias || gUser.displayName?.split(' ')[0] || 'Traveler',
+                            pin: '000000',
+                            picture: cloudData.picture || gUser.photoURL || null,
+                            travelerType: cloudData.travelerType || '🎒 Turista',
+                            provinces: cloudData.provinces || {},
+                            customNotes: cloudData.customNotes || [],
+                            bucketChecked: cloudData.bucketChecked || [],
+                            isFirebase: true
+                        };
+                        // Update local cache with fresh cloud data
+                        const users = getAllUsers();
+                        users[gUser.uid] = { ...currentUser };
+                        delete users[gUser.uid].key;
+                        delete users[gUser.uid].isFirebase;
+                        saveAllUsers(users);
+                        setSession(gUser.uid);
+                    } else {
+                        // New device — no cloud data yet, create skeleton
+                        currentUser = {
+                            key: gUser.uid,
+                            displayName: gUser.displayName || 'Explorer',
+                            alias: gUser.displayName?.split(' ')[0] || 'Traveler',
+                            pin: '000000',
+                            picture: gUser.photoURL || null,
+                            travelerType: '🎒 Turista',
+                            provinces: {},
+                            customNotes: [],
+                            bucketChecked: [],
+                            isFirebase: true
+                        };
+                        setSession(gUser.uid);
+                    }
+                    overlay.classList.add('hidden');
+                    setTimeout(() => overlay.style.display = 'none', 500);
+                    onUserReady();
+                    showToast(`Welcome back, ${currentUser.displayName}! Data synced from cloud. ☁️`, 'success');
+                } else {
+                    // No Firebase session — fall back to alias/PIN localStorage session
+                    const session = getSession();
+                    if (session) {
+                        const users = getAllUsers();
+                        const user = users[session.username];
+                        if (user) {
+                            currentUser = { key: session.username, ...user };
+                            overlay.classList.add('hidden');
+                            setTimeout(() => overlay.style.display = 'none', 500);
+                            onUserReady();
+                            return;
+                        } else {
+                            clearSession();
+                        }
+                    }
+                }
+            });
+        } else {
+            // Firebase not ready — use localStorage session only
+            const session = getSession();
+            if (session) {
+                const users = getAllUsers();
+                const user = users[session.username];
+                if (user) {
+                    currentUser = { key: session.username, ...user };
+                    overlay.classList.add('hidden');
+                    setTimeout(() => overlay.style.display = 'none', 500);
+                    onUserReady();
+                    return;
+                } else {
+                    clearSession();
+                }
             }
         }
 
@@ -639,34 +706,6 @@
                 googleBtn.title = 'Firebase not configured';
             }
             googleBtn.addEventListener('click', () => handleGoogleSignIn(overlay));
-        }
-
-        // Check if Firebase user is already signed in
-        if (firebaseReady) {
-            firebaseAuth.onAuthStateChanged(async (gUser) => {
-                if (gUser && !currentUser) {
-                    // User already signed in via Firebase, auto-load
-                    const cloudData = await loadFromCloud();
-                    if (cloudData) {
-                        currentUser = {
-                            key: gUser.uid,
-                            displayName: cloudData.displayName || gUser.displayName || 'Explorer',
-                            alias: cloudData.alias || gUser.displayName?.split(' ')[0] || 'Traveler',
-                            pin: '000000',
-                            picture: cloudData.picture || gUser.photoURL || null,
-                            travelerType: cloudData.travelerType || '🎒 Turista',
-                            provinces: cloudData.provinces || {},
-                            customNotes: cloudData.customNotes || [],
-                            bucketChecked: cloudData.bucketChecked || [],
-                            isFirebase: true
-                        };
-                        setSession(gUser.uid);
-                        overlay.classList.add('hidden');
-                        setTimeout(() => overlay.style.display = 'none', 500);
-                        onUserReady();
-                    }
-                }
-            });
         }
     }
 
@@ -745,8 +784,12 @@
                 avatarLetter.textContent = name.charAt(0).toUpperCase();
             }
 
+            const syncBtn = document.getElementById('btn-sync-cloud');
             if (currentUser.isGuest) {
                 if(saveBtn) saveBtn.style.display = 'none';
+                if(syncBtn) syncBtn.style.display = 'none';
+            } else if (currentUser.isFirebase) {
+                if(syncBtn) syncBtn.style.display = 'flex';
             }
         }
     }
@@ -1108,10 +1151,43 @@
         }
         saveProvinceStates();
         if (currentUser.isFirebase) {
-            showToast('Progress saved & synced to cloud! ☁️', 'success');
+            syncToCloud().then(() => {
+                showToast('Progress saved & synced to cloud! ☁️', 'success');
+            });
         } else {
             showToast('Progress saved!', 'success');
         }
+    }
+
+    async function forceCloudLoad() {
+        if (!currentUser || currentUser.isGuest || !currentUser.isFirebase) {
+            showToast('Cloud sync is only available for Google sign-in users.', 'info');
+            return;
+        }
+        showToast('Syncing from cloud…', 'info');
+        const cloudData = await loadFromCloud();
+        if (!cloudData) {
+            showToast('No cloud data found.', 'error');
+            return;
+        }
+        currentUser.provinces   = cloudData.provinces   || {};
+        currentUser.customNotes = cloudData.customNotes || [];
+        currentUser.bucketChecked = cloudData.bucketChecked || [];
+        // Update local cache
+        const users = getAllUsers();
+        if (users[currentUser.key]) {
+            users[currentUser.key].provinces    = currentUser.provinces;
+            users[currentUser.key].customNotes  = currentUser.customNotes;
+            users[currentUser.key].bucketChecked = currentUser.bucketChecked;
+            saveAllUsers(users);
+        }
+        // Re-render everything
+        loadProvinceStates();
+        updateStats();
+        if (typeof renderCustomNotes === 'function') renderCustomNotes();
+        if (typeof renderBucketList  === 'function') renderBucketList();
+        if (typeof refreshKalenDAYO  === 'function') refreshKalenDAYO();
+        showToast('Synced from cloud! ☁️✅', 'success');
     }
 
     function performReset() {
@@ -2329,6 +2405,7 @@
         setupPasswordToggle('edit-pin', 'toggle-edit-pin');
 
         document.getElementById('btn-save')?.addEventListener('click', manualSave);
+        document.getElementById('btn-sync-cloud')?.addEventListener('click', forceCloudLoad);
         document.getElementById('btn-logout')?.addEventListener('click', logout);
     }
 
@@ -2338,6 +2415,6 @@
         init();
     }
 
-    window.LAKbay = { showToast, downloadPDF, manualSave, performReset, logout };
+    window.LAKbay = { showToast, downloadPDF, manualSave, forceCloudLoad, performReset, logout };
 
 })();
